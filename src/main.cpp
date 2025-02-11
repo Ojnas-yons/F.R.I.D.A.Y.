@@ -108,7 +108,7 @@ lemlib::OdomSensors sensors(nullptr, // set to nullptr as we don't have a vertic
 // create the chassis
 lemlib::Chassis chassis(drivetrain, linearController, angularController, sensors);
 
-// wallstake
+
 void wallstakeLoop(double target_position) {
     // PID control loop
     if (!manual_control_active) {
