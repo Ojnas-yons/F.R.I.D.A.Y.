@@ -27,28 +27,19 @@ pros::Motor wallstake(13, pros::MotorGearset::green); // wallstake motor on port
 
 // Pistons
 pros::ADIDigitalOut clamp_piston('B', false); // piston on special port B
-pros::ADIDigitalOut sweeper_piston('D', false); // piston on special port D
+pros::ADIDigitalOut doinker_piston('D', false); // piston on special port D
+pros::ADIDigitalOut tipper_piston('F', false); // piston on special port F
 
 
 // Variables
-bool sweeper_state = false; // tracks the state of the sweeper piston
+bool doinker_state = false; // tracks the state of the doinker piston
 bool clamp_state = false; // tracks the state of the clamp pistons
+bool tipper_state = false; // tracks the state of the tipper piston
 static bool run_color_sort = true; // controls if color sorting should happen or not
-bool is_sorting_active = false;
+bool is_sorting_active = false; // tracks if color sorting is happening
 const int none = 0;
 const int red = 1;
 const int blue = 2;
-
-// Target positions for macros
-int intake_position = 318;  // position for intake
-int scoring_position = 110; // position for scoring
-static double target_position = 0; // Desired position (set when macro is active)
-
-// Track whether a macro command is active
-static bool macro_active = false;
-
-// Track whether manual control is active
-static bool manual_control_active = false;
 
 // Team color and opposing color
 static int teamColor = red;
@@ -111,27 +102,20 @@ lemlib::Chassis chassis(drivetrain, linearController, angularController, sensors
 
 void wallstakeLoop(double target_position) {
     // PID control loop
-    if (!manual_control_active) {
-        // PID constant
-        double kP = 0.85;
+    // PID constant
+    double kP = 0.85;
         
-        // Get current position from the rotational sensor
-        float angle_in_centidegrees = rotation_sensor.get_angle();
-        float angle_in_degrees = angle_in_centidegrees / 100.0;
-        double current_position = angle_in_degrees;
+    // Get current position from the rotational sensor
+    float angle_in_centidegrees = rotation_sensor.get_angle();
+    float angle_in_degrees = angle_in_centidegrees / 100.0;
+    double current_position = angle_in_degrees;
 
-        // PID variables
-        if (current_position < 360) {
-            double error = target_position - current_position;
-        }
-        if (current_position >= 360) {
-            double error = current_position - target_position;
-        }
-        double velocity = kP * error;
+    // PID variables
+    double error = target_position - current_position;
+    double velocity = kP * error;
 
-        // Apply motor power
-        wallstake.move(velocity);
-    }
+    // Apply motor power
+    wallstake.move(velocity);
 }
 
 
@@ -226,8 +210,8 @@ void setClamp(bool clamp_state) {
 }
 
 
-void setSweeper(bool sweeper_state) {
-    sweeper_piston.set_value(sweeper_state);
+void setdoinker(bool doinker_state) {
+    doinker_piston.set_value(doinker_state);
 }
 
 
@@ -296,6 +280,18 @@ void autonomous() {
 
 
 void opcontrol() {
+    // Target positions for macros
+    int intake_position = 318;  // position for intake
+    int scoring_position = 110; // position for scoring
+    double target_position = 0; // Desired position (set when macro is active)
+
+    // Track whether a macro command is active
+    bool macro_active = false;
+
+
+    // Track whether manual control is active
+    bool manual_control_active = false;
+
     while (true) {
         // Get left y and right y positions
         int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
@@ -340,7 +336,6 @@ void opcontrol() {
             manual_control_active = false; // Disable manual control
             wallstake.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); // Enable hold mode
             target_position = intake_position; // Set target position for PID
-            wallstakeLoop(target_position);
         }
 
         if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
@@ -348,7 +343,24 @@ void opcontrol() {
             manual_control_active = false; // Disable manual control
             wallstake.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD); // Enable hold mode
             target_position = scoring_position; // Set target position for PID
-            wallstakeLoop(target_position);
+        }
+
+        // PID control loop
+        if (!manual_control_active) {
+            // PID constant
+            double kP = 0.85;
+        
+            // Get current position from the rotational sensor
+            float angle_in_centidegrees = rotation_sensor.get_angle();
+            float angle_in_degrees = angle_in_centidegrees / 100.0;
+            double current_position = angle_in_degrees;
+
+            // PID variables
+            double error = current_position - target_position;
+            double velocity = kP * error;
+
+            // Apply motor power
+            wallstake.move(velocity);
         }
 
         // Exit macro and re-enable manual control if buttons are pressed
@@ -364,18 +376,27 @@ void opcontrol() {
             clamp_state = !clamp_state;
             clamp_piston.set_value(clamp_state); // Set the clamp piston to the new state
             if (clamp_state == true) {
+                controller.clear();
                 controller.print(0, 0, "Clamped");
             }
             else {
+                controller.clear();
                 controller.print(0, 0, "Unclamped");
             }
         }
 
 
-        // Sweeper toggle logic
+        // tipper control logic
+        if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_RIGHT)) {
+            tipper_state = !tipper_state;
+            tipper_piston.set_value(tipper_state); // Set the tipper piston to the new state
+        }
+
+
+        // doinker toggle logic
         if (controller.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
-            sweeper_state = !sweeper_state;
-            sweeper_piston.set_value(sweeper_state); // Set the sweeper piston to the new state
+            doinker_state = !doinker_state;
+            doinker_piston.set_value(doinker_state); // Set the doinker piston to the new state
         }
 
 
