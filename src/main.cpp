@@ -37,6 +37,7 @@ bool clamp_state = false; // tracks the state of the clamp pistons
 bool tipper_state = false; // tracks the state of the tipper piston
 static bool run_color_sort = true; // controls if color sorting should happen or not
 bool is_sorting_active = false; // tracks if color sorting is happening
+static double wallstakeTargetPos = 0.0;
 const int none = 0;
 const int red = 1;
 const int blue = 2;
@@ -100,25 +101,6 @@ lemlib::OdomSensors sensors(nullptr, // set to nullptr as we don't have a vertic
 lemlib::Chassis chassis(drivetrain, linearController, angularController, sensors);
 
 
-void wallstakeLoop(double target_position) {
-    // PID control loop
-    // PID constant
-    double kP = 0.85;
-        
-    // Get current position from the rotational sensor
-    float angle_in_centidegrees = rotation_sensor.get_angle();
-    float angle_in_degrees = angle_in_centidegrees / 100.0;
-    double current_position = angle_in_degrees;
-
-    // PID variables
-    double error = target_position - current_position;
-    double velocity = kP * error;
-
-    // Apply motor power
-    wallstake.move(velocity);
-}
-
-
 // Get detected color
 static int get_opticalColor() {
     double hue = optical_sensor.get_hue();
@@ -147,9 +129,10 @@ void initialize() {
                 int color = get_opticalColor();
                 if (color == opposingTeamColor) {
                     is_sorting_active = true;
+                    pros::delay(100);
                     secondStage.move(-127);
-                    pros::delay(500);
-                    secondStage.move(0);
+                    pros::delay(100);
+                    secondStage.move(127);
                     is_sorting_active = false;
                 }
             }
@@ -215,41 +198,36 @@ void setdoinker(bool doinker_state) {
 }
 
 
+void setTipper(bool tipper_state) {
+    tipper_piston.set_value(tipper_state);
+}
+
+
 void setIntake(int power) {
     intake.move(power);
 }
 
 
-void setLadyBrown(int targetPos, uint32_t timeout = 3000, bool reset_velocity = true, uint32_t loopWaitTime = 1) {
-    uint32_t start = pros::millis();
-    while ((pros::millis() - start) < timeout) {
-        wallstakeLoop(targetPos);
-        pros::delay(loopWaitTime);
-    }
-    if (reset_velocity) {
-        wallstake.move(0);
-    }
-}
-
-
 void auton_red_negative() {
     chassis.setPose(0, 0, 0);
-    chassis.moveToPose(0, -38, 0, 2500, {.forwards = false});
+    chassis.moveToPose(0, -36, 0, 2500, {.forwards = false});
     pros::delay(1500);
     setClamp(true);
     setIntake(127);
-    chassis.moveToPose(21, -36, 60, 2000, {.maxSpeed = 90});
+    chassis.moveToPose(21, -30, 60, 2000, {.maxSpeed = 90});
     pros::delay(800);
-    chassis.moveToPose(21, -50, 180, 1500);
+    chassis.moveToPose(20, -48, 200, 1500);
     pros::delay(700);
-    chassis.moveToPose(19, -38, 180, 1000, {.forwards = false});
+    chassis.moveToPose(20, -36, 200, 1000, {.forwards = false});
     pros::delay(1000);
-    chassis.moveToPose(42, -50, 95, 1500);
+    chassis.moveToPose(24, -48, 170, 1500);
     pros::delay(700);
-    chassis.moveToPose(0, -38, -85, 2000, {.maxSpeed = 80});
+    chassis.moveToPose(-2, -38, -95, 2000, {.maxSpeed = 80});
     pros::delay(2500);
     setIntake(0);
-    setLadyBrown(90, 1000, true);
+    wallstake.move(127);
+    pros::delay(550);
+    wallstake.move(0);
 }
 
 
@@ -281,7 +259,7 @@ void autonomous() {
 
 void opcontrol() {
     // Target positions for macros
-    int intake_position = 318;  // position for intake
+    int intake_position = 324;  // position for intake
     int scoring_position = 110; // position for scoring
     double target_position = 0; // Desired position (set when macro is active)
 
