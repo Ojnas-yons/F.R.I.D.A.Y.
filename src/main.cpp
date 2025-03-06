@@ -2,12 +2,16 @@
 #include "lemlib/api.hpp"
 
 
+
+
 /**
 * Runs initialization code. This occurs as soon as the program is started.
 *
 * All other competition modes are blocked by initialize; it is recommended
 * to keep execution time for this mode under a few seconds.
 */
+
+
 
 
 // Sensors
@@ -218,11 +222,16 @@ void auton_red_negative() {
     color_sort_toggle = -1;
     chassis.setPose(0, 0, 0);
     chassis.moveToPose(0, -38, 0, 2500, {.forwards = false});
+    chassis.moveToPose(0, -38, 0, 2500, {.forwards = false});
     pros::delay(1500);
     setClamp(true);
     setIntake(127);
     chassis.moveToPose(28, -48, 90, 3000);
+    chassis.moveToPose(28, -48, 90, 3000);
     pros::delay(1000);
+    chassis.moveToPose(20, -24, 0, 1500);
+    pros::delay(800);
+    chassis.moveToPose(-10, -38, -95, 1500, {.maxSpeed = 80});
     chassis.moveToPose(20, -24, 0, 1500);
     pros::delay(800);
     chassis.moveToPose(-10, -38, -95, 1500, {.maxSpeed = 80});
